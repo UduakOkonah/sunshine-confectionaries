@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   Edit3,
   ImagePlus,
+  Loader2,
   Plus,
   Search,
   Star,
@@ -32,17 +33,23 @@ function AdminProducts() {
   const [editingProductId, setEditingProductId] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categories = useMemo(() => {
-    return [...new Set(products.map((product) => product.category).filter(Boolean))];
+    return [
+      ...new Set(products.map((product) => product.category).filter(Boolean)),
+    ];
   }, [products]);
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
+      const search = searchTerm.toLowerCase();
+
       const matchesSearch =
-        product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.sku?.toLowerCase().includes(searchTerm.toLowerCase());
+        product.name?.toLowerCase().includes(search) ||
+        product.category?.toLowerCase().includes(search) ||
+        product.sku?.toLowerCase().includes(search);
 
       const matchesCategory =
         categoryFilter === "All" || product.category === categoryFilter;
@@ -50,6 +57,11 @@ function AdminProducts() {
       return matchesSearch && matchesCategory;
     });
   }, [products, searchTerm, categoryFilter]);
+
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setEditingProductId(null);
+  };
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -60,39 +72,80 @@ function AdminProducts() {
     }));
   };
 
-const handleImageUpload = async (event) => {
-  const file = event.target.files?.[0];
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
 
-  if (!file) return;
+    if (!file) return;
 
-  if (!file.type.startsWith("image/")) {
-    alert("Please upload a valid image file.");
-    return;
-  }
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload a valid image file.");
+      return;
+    }
 
-  if (file.size > 5 * 1024 * 1024) {
-    alert("Image is too large. Please upload an image below 5MB.");
-    return;
-  }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image is too large. Please upload an image below 5MB.");
+      return;
+    }
 
-  const uploadData = new FormData();
-  uploadData.append("image", file);
+    const uploadData = new FormData();
+    uploadData.append("image", file);
 
-  try {
-    const { data } = await api.post("/upload", uploadData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    try {
+      setIsUploading(true);
 
-    setFormData((currentData) => ({
-      ...currentData,
-      image: data.imageUrl,
-    }));
-  } catch (error) {
-    alert(error.response?.data?.message || "Image upload failed");
-  }
-};
+      const { data } = await api.post("/upload", uploadData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setFormData((currentData) => ({
+        ...currentData,
+        image: data.imageUrl,
+      }));
+    } catch (error) {
+      alert(error.response?.data?.message || "Image upload failed");
+    } finally {
+      setIsUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (!formData.name || !formData.category || !formData.price || !formData.image) {
+      alert("Please fill product name, category, price, and upload an image.");
+      return;
+    }
+
+    const productData = {
+      ...formData,
+      price: Number(formData.price),
+      oldPrice: formData.oldPrice ? Number(formData.oldPrice) : 0,
+      stock: formData.stock ? Number(formData.stock) : 0,
+      sku: formData.sku || `SKU-${Date.now()}`,
+    };
+
+    try {
+      setIsSubmitting(true);
+
+      if (editingProductId) {
+        await updateProduct({
+          ...productData,
+          _id: editingProductId,
+        });
+      } else {
+        await addProduct(productData);
+      }
+
+      resetForm();
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to save product");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleEdit = (product) => {
     setEditingProductId(product._id || product.id);
@@ -123,39 +176,6 @@ const handleImageUpload = async (event) => {
       maximumFractionDigits: 0,
     }).format(price || 0);
   };
-
-  const handleSubmit = async (event) => {
-  event.preventDefault();
-
-  if (
-    !formData.name ||
-    !formData.category ||
-    !formData.price ||
-    !formData.image
-  ) {
-    alert("Please fill product name, category, price, and upload an image.");
-    return;
-  }
-
-  const productData = {
-    ...formData,
-    price: Number(formData.price),
-    oldPrice: formData.oldPrice ? Number(formData.oldPrice) : "",
-    stock: formData.stock ? Number(formData.stock) : 0,
-    sku: formData.sku || `SKU-${Date.now()}`,
-  };
-
-  if (editingProductId) {
-    await updateProduct({
-      ...productData,
-      _id: editingProductId,
-    });
-  } else {
-    await addProduct(productData);
-  }
-
-  resetForm();
-};
 
   return (
     <section className="min-h-screen bg-[#FFF7D6] px-4 py-10 sm:px-6 lg:px-8">
@@ -204,21 +224,25 @@ const handleImageUpload = async (event) => {
                     />
 
                     <div className="absolute inset-x-0 bottom-0 bg-black/50 px-4 py-3 text-sm font-black text-white">
-                      Click to change image
+                      {isUploading ? "Uploading..." : "Click to change image"}
                     </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center py-8">
                     <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-white text-green-600 shadow-md">
-                      <UploadCloud size={28} />
+                      {isUploading ? (
+                        <Loader2 className="animate-spin" size={28} />
+                      ) : (
+                        <UploadCloud size={28} />
+                      )}
                     </div>
 
                     <p className="mt-4 text-sm font-black text-slate-800">
-                      Upload product image
+                      {isUploading ? "Uploading image..." : "Upload product image"}
                     </p>
 
                     <p className="mt-1 text-xs font-medium text-slate-500">
-                      PNG, JPG, or WEBP. Max 2MB.
+                      PNG, JPG, or WEBP. Max 5MB.
                     </p>
                   </div>
                 )}
@@ -227,6 +251,7 @@ const handleImageUpload = async (event) => {
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
+                  disabled={isUploading}
                   className="hidden"
                 />
               </label>
@@ -314,7 +339,6 @@ const handleImageUpload = async (event) => {
                     onChange={handleChange}
                     className="h-5 w-5"
                   />
-
                   <span className="text-sm font-black text-slate-700">
                     Featured
                   </span>
@@ -328,7 +352,6 @@ const handleImageUpload = async (event) => {
                     onChange={handleChange}
                     className="h-5 w-5"
                   />
-
                   <span className="text-sm font-black text-slate-700">
                     Available
                   </span>
@@ -337,9 +360,14 @@ const handleImageUpload = async (event) => {
 
               <button
                 type="submit"
-                className="flex w-full items-center justify-center gap-2 rounded-full bg-green-500 px-6 py-4 text-sm font-black text-white shadow-lg shadow-green-200 transition hover:-translate-y-1 hover:bg-green-600"
+                disabled={isUploading || isSubmitting}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-green-500 px-6 py-4 text-sm font-black text-white shadow-lg shadow-green-200 transition hover:-translate-y-1 hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <Plus size={18} />
+                {isSubmitting ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <Plus size={18} />
+                )}
                 {editingProductId ? "Update Product" : "Add Product"}
               </button>
             </form>
@@ -437,7 +465,7 @@ const handleImageUpload = async (event) => {
                             {formatPrice(product.price)}
                           </p>
 
-                          {product.oldPrice && (
+                          {product.oldPrice > 0 && (
                             <p className="mt-1 text-xs font-bold text-slate-400 line-through">
                               {formatPrice(product.oldPrice)}
                             </p>
@@ -468,7 +496,7 @@ const handleImageUpload = async (event) => {
                         </button>
 
                         <button
-                          onClick={() => deleteProduct(product._id || product.id)}next
+                          onClick={() => deleteProduct(product._id || product.id)}
                           className="flex items-center justify-center rounded-full bg-red-100 px-4 py-3 text-red-600 transition hover:bg-red-200"
                         >
                           <Trash2 size={18} />

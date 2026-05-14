@@ -27,6 +27,7 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminOrders from "./pages/admin/AdminOrders";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminDeliveryZones from "./pages/admin/AdminDeliveryZones";
 
 
 function App() {
@@ -113,6 +114,7 @@ function App() {
         <Route path="products" element={<AdminProducts />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="delivery" element={<AdminDeliveryZones />} />
       </Route>
     </Routes>
   );

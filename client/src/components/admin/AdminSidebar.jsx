@@ -4,10 +4,12 @@ import {
   LayoutDashboard,
   Package,
   ShoppingBag,
-  MapPinned,
+  Settings,
+  Truck,
   ShieldCheck,
-  Menu,
   X,
+  Menu,
+  LogOut,
 } from "lucide-react";
 
 const links = [
@@ -26,11 +28,16 @@ const links = [
     path: "/admin/orders",
     icon: ShoppingBag,
   },
-  {
-    name: "Delivery Zones",
-    path: "/admin/delivery-zones",
-    icon: MapPinned,
-  },
+{
+  name: "Delivery",
+  path: "/admin/delivery",
+  icon: Truck,
+},
+{
+  name: "Settings",
+  path: "/admin/settings",
+  icon: Settings,
+},
 ];
 
 function AdminSidebar() {
@@ -78,11 +85,11 @@ function AdminSidebar() {
       )}
 
       {/* Desktop + Mobile Sidebar */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-[60] flex min-h-screen w-72 flex-col border-r border-green-100 bg-gradient-to-b from-white via-green-50 to-yellow-50 p-6 text-slate-900 shadow-2xl transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
+<aside
+  className={`fixed inset-y-0 left-0 z-[60] flex h-screen w-72 flex-col overflow-y-auto border-r border-green-100 bg-gradient-to-b from-white via-green-50 to-yellow-50 p-6 text-slate-900 shadow-2xl transition-transform duration-300 lg:translate-x-0 ${
+    isOpen ? "translate-x-0" : "-translate-x-full"
+  }`}
+>
         {/* Green Full Header */}
         <div className="-mx-6 -mt-6 rounded-b-[32px] bg-gradient-to-br from-green-500 to-emerald-700 p-6 text-white shadow-lg">
           <div className="flex items-start justify-between gap-4">

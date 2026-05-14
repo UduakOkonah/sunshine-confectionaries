@@ -3,11 +3,13 @@ import AdminSidebar from "../components/admin/AdminSidebar";
 
 function AdminLayout() {
   return (
-    <div className="min-h-screen bg-slate-100 lg:flex">
+    <div className="min-h-screen overflow-x-hidden bg-slate-100">
       <AdminSidebar />
 
-      <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
-        <Outlet />
+      <main className="min-h-screen overflow-x-hidden lg:ml-72">
+        <div className="mx-auto w-full max-w-[1600px] overflow-x-hidden">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
