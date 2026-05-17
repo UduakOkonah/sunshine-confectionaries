@@ -298,7 +298,7 @@ const canConfirmDelivery = (order) => {
     setConfirmingDelivery(true);
 
     await fetch(
-      `http://localhost:5000/api/orders/${order._id}/confirm-delivery`,
+      `https://sunshine-confectionaries.onrender.com/api/orders/${order._id}/confirm-delivery`,
       {
         method: "PATCH",
         headers: {
@@ -317,7 +317,7 @@ const canConfirmDelivery = (order) => {
 
 const handleSubmitReview = async () => {
   try {
-    await fetch("http://localhost:5000/api/reviews", {
+    await fetch("https://sunshine-confectionaries.onrender.com/api/reviews", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

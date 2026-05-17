@@ -16,7 +16,7 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_URL = import.meta.env.VITE_API_URL || "https://sunshine-confectionaries.onrender.com/api";
 
 const allowedImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
