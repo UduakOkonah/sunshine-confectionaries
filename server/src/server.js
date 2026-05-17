@@ -30,6 +30,8 @@ app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/custom-orders", require("./routes/customOrderRoutes"));
+app.use("/api/custom-pricing", require("./routes/customPricingRoutes"));
 
 app.get("/", (req, res) => {
   res.json({

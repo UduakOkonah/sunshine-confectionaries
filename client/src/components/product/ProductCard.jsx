@@ -1,110 +1,231 @@
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
+  Eye,
   Heart,
+  Minus,
+  Plus,
   ShoppingCart,
   Star,
 } from "lucide-react";
 
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import toast from "react-hot-toast";
 
 import { useCart } from "../../context/CartContext";
 import { useWishlist } from "../../context/WishlistContext";
 
 function ProductCard({ product }) {
   const { addToCart } = useCart();
-
   const { toggleWishlist, isInWishlist } = useWishlist();
 
-  const favorite = isInWishlist(product._id || product.id);
+  const [quantity, setQuantity] = useState(1);
 
-  const handleAddToCart = () => {
-    addToCart(product, 1);
-  };
+  const productId = product._id || product.id;
+  const favorite = isInWishlist(productId);
+
+  const stock = Number(product.stock ?? product.quantity ?? 99);
+  const isOutOfStock = stock <= 0;
 
   const formatPrice = (price) =>
     new Intl.NumberFormat("en-NG", {
       style: "currency",
       currency: "NGN",
       maximumFractionDigits: 0,
-    }).format(price);
+    }).format(Number(price || 0));
+
+  const increaseQuantity = () => {
+    if (isOutOfStock) return;
+
+    setQuantity((current) => {
+      const currentQuantity = Number(current) || 1;
+
+      if (stock && currentQuantity >= stock) {
+        toast.error("You have reached the available stock limit.");
+        return currentQuantity;
+      }
+
+      return currentQuantity + 1;
+    });
+  };
+
+  const decreaseQuantity = () => {
+    setQuantity((current) => {
+      const currentQuantity = Number(current) || 1;
+      return currentQuantity > 1 ? currentQuantity - 1 : 1;
+    });
+  };
+
+  const handleManualQuantityChange = (event) => {
+    const value = event.target.value;
+
+    if (value === "") {
+      setQuantity("");
+      return;
+    }
+
+    const numericValue = Number(value);
+
+    if (Number.isNaN(numericValue)) return;
+
+    if (numericValue < 1) {
+      setQuantity(1);
+      return;
+    }
+
+    if (stock && numericValue > stock) {
+      setQuantity(stock);
+      toast.error("You have reached the available stock limit.");
+      return;
+    }
+
+    setQuantity(numericValue);
+  };
+
+  const handleQuantityBlur = () => {
+    if (!quantity || Number(quantity) < 1) {
+      setQuantity(1);
+    }
+  };
+
+  const handleAddToCart = () => {
+    if (isOutOfStock) {
+      toast.error("This product is currently out of stock.");
+      return;
+    }
+
+    const finalQuantity = Number(quantity) || 1;
+
+    addToCart(product, finalQuantity);
+    toast.success(`${finalQuantity} ${product.name} added to cart.`);
+  };
 
   return (
     <motion.article
-      whileHover={{
-        y: -6,
-        scale: 1.01,
-      }}
-      className="group overflow-hidden rounded-[32px] bg-white shadow-lg transition"
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      whileHover={{ y: -5 }}
+      className="group overflow-hidden rounded-[26px] bg-white shadow-lg transition"
     >
-      {/* IMAGE */}
-      <div className="relative overflow-hidden">
-        <Link to={`/products/${product._id || product.id}`}>
-          <img
-            src={product.image}
-            alt={product.name}
-            className="h-72 w-full object-cover transition duration-500 group-hover:scale-110"
-          />
-        </Link>
+      <div className="relative h-44 overflow-hidden bg-yellow-50">
+        <img
+          src={product.image}
+          alt={product.name}
+          className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+        />
 
-        <button
-          onClick={() => toggleWishlist(product)}
-          className={`absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full shadow-lg transition ${
-            favorite
-              ? "bg-red-500 text-white"
-              : "bg-white/90 text-slate-700"
-          }`}
-        >
-          <Heart
-            size={18}
-            fill={favorite ? "currentColor" : "none"}
-          />
-        </button>
-
-        <div className="absolute left-4 top-4 rounded-full bg-yellow-300 px-3 py-1 text-xs font-black text-slate-900">
+        <div className="absolute left-3 top-3 rounded-full bg-yellow-100 px-3 py-1.5 text-[10px] font-black text-yellow-700 shadow">
           {product.category}
         </div>
+
+        <button
+          type="button"
+          onClick={() => toggleWishlist(product)}
+          className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full shadow-md transition ${
+            favorite ? "bg-red-500 text-white" : "bg-white text-slate-700"
+          }`}
+        >
+          <Heart size={16} fill={favorite ? "currentColor" : "none"} />
+        </button>
+
+        {isOutOfStock && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+            <span className="rounded-full bg-red-500 px-4 py-2 text-xs font-black text-white">
+              Out of Stock
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* CONTENT */}
-      <div className="p-5">
+      <div className="p-4">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <Link to={`/products/${product._id || product.id}`}>
-              <h2 className="text-xl font-black text-slate-900 transition hover:text-green-600">
-                {product.name}
-              </h2>
-            </Link>
+          <div className="min-w-0">
+            <h2 className="line-clamp-1 text-base font-black text-slate-900">
+              {product.name}
+            </h2>
 
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              {product.description}
-            </p>
+            <div className="mt-1.5 flex items-center gap-1 text-yellow-500">
+              {[...Array(5)].map((_, index) => (
+                <Star key={index} size={12} fill="currentColor" />
+              ))}
+
+              <span className="ml-1 text-[10px] font-black text-slate-400">
+                5.0
+              </span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-black text-yellow-700">
-            <Star size={14} fill="currentColor" />
-            4.9
-          </div>
+          <p className="shrink-0 text-sm font-black text-green-700">
+            {formatPrice(product.price)}
+          </p>
         </div>
 
-        {/* PRICE + BUTTON */}
-        <div className="mt-5 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-              Price
-            </p>
+        <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-500">
+          {product.description}
+        </p>
 
-            <h3 className="mt-1 text-2xl font-black text-green-700">
-              {formatPrice(product.price)}
-            </h3>
+        <div className="mt-4 rounded-[20px] bg-yellow-50 p-2.5">
+          <p className="mb-2 text-center text-[10px] font-black uppercase tracking-[0.12em] text-slate-400">
+            Quantity
+          </p>
+
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={decreaseQuantity}
+              disabled={Number(quantity) <= 1}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Minus size={14} />
+            </button>
+
+            <input
+              type="number"
+              min="1"
+              max={stock}
+              value={quantity}
+              onChange={handleManualQuantityChange}
+              onBlur={handleQuantityBlur}
+              disabled={isOutOfStock}
+              className="h-9 w-16 rounded-xl border border-yellow-200 bg-white text-center text-sm font-black text-slate-900 outline-none transition focus:border-green-400 disabled:cursor-not-allowed disabled:bg-slate-100"
+            />
+
+            <button
+              type="button"
+              onClick={increaseQuantity}
+              disabled={isOutOfStock || Number(quantity) >= stock}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-green-500 text-white shadow-sm transition hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <Plus size={14} />
+            </button>
           </div>
 
+          {!isOutOfStock && (
+            <p className="mt-1.5 text-center text-[10px] font-bold text-slate-400">
+              Available: {stock}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
           <button
+            type="button"
             onClick={handleAddToCart}
-            className="inline-flex items-center gap-2 rounded-[60px] bg-green-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-green-200 transition hover:-translate-y-1 hover:bg-green-600"
+            disabled={isOutOfStock}
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-green-500 px-3 py-2.5 text-[11px] font-black text-white shadow-md transition hover:bg-green-600 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            <ShoppingCart size={17} />
+            <ShoppingCart size={14} />
             Add
           </button>
+
+          <Link
+            to={`/products/${productId}`}
+            className="inline-flex items-center justify-center gap-1.5 rounded-full bg-yellow-100 px-3 py-2.5 text-[11px] font-black text-yellow-700 transition hover:bg-yellow-200"
+          >
+            <Eye size={14} />
+            View
+          </Link>
         </div>
       </div>
     </motion.article>

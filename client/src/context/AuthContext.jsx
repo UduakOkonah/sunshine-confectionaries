@@ -11,7 +11,12 @@ import api from "../lib/api";
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem("sunshine-user");
+
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,14 +25,18 @@ export function AuthProvider({ children }) {
         const token = localStorage.getItem("sunshine-token");
 
         if (!token) {
+          setUser(null);
           setLoading(false);
           return;
         }
 
         const { data } = await api.get("/auth/me");
+
         setUser(data);
+        localStorage.setItem("sunshine-user", JSON.stringify(data));
       } catch (error) {
         localStorage.removeItem("sunshine-token");
+        localStorage.removeItem("sunshine-user");
         setUser(null);
       } finally {
         setLoading(false);
@@ -42,6 +51,8 @@ export function AuthProvider({ children }) {
       const { data } = await api.post("/auth/register", formData);
 
       localStorage.setItem("sunshine-token", data.token);
+      localStorage.setItem("sunshine-user", JSON.stringify(data.user));
+
       setUser(data.user);
 
       toast.success("Registration successful");
@@ -65,6 +76,8 @@ export function AuthProvider({ children }) {
       const { data } = await api.post("/auth/login", formData);
 
       localStorage.setItem("sunshine-token", data.token);
+      localStorage.setItem("sunshine-user", JSON.stringify(data.user));
+
       setUser(data.user);
 
       toast.success("Login successful");
@@ -85,7 +98,10 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem("sunshine-token");
+    localStorage.removeItem("sunshine-user");
+
     setUser(null);
+
     toast.success("Logged out");
   };
 
@@ -101,7 +117,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 }

@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import toast from "react-hot-toast";
 import api from "../lib/api";
 import { useAuth } from "./AuthContext";
@@ -7,17 +13,31 @@ const OrderContext = createContext(null);
 
 export function OrderProvider({ children }) {
   const { user, isAuthenticated } = useAuth();
+
   const [orders, setOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+
+  const normalizeOrders = (data) => {
+    if (Array.isArray(data)) return data;
+
+    if (Array.isArray(data?.orders)) return data.orders;
+
+    if (Array.isArray(data?.order)) return data.order;
+
+    return [];
+  };
 
   const fetchMyOrders = async () => {
     if (!isAuthenticated || user?.role === "admin") return;
 
     try {
       setLoadingOrders(true);
+
       const { data } = await api.get("/orders/my-orders");
-      setOrders(data);
+
+      setOrders(normalizeOrders(data));
     } catch (error) {
+      setOrders([]);
       toast.error("Failed to load your orders");
     } finally {
       setLoadingOrders(false);
@@ -29,9 +49,12 @@ export function OrderProvider({ children }) {
 
     try {
       setLoadingOrders(true);
+
       const { data } = await api.get("/orders");
-      setOrders(data);
+
+      setOrders(normalizeOrders(data));
     } catch (error) {
+      setOrders([]);
       toast.error("Failed to load orders");
     } finally {
       setLoadingOrders(false);
@@ -67,11 +90,17 @@ export function OrderProvider({ children }) {
         items: cleanedItems,
       });
 
-      setOrders((currentOrders) => [data.order, ...currentOrders]);
+      const newOrder = data.order || data;
+
+      setOrders((currentOrders) =>
+        Array.isArray(currentOrders)
+          ? [newOrder, ...currentOrders]
+          : [newOrder]
+      );
 
       toast.success("Order placed. Waiting for admin approval.");
 
-      return data.order;
+      return newOrder;
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to create order");
       return null;
@@ -82,10 +111,17 @@ export function OrderProvider({ children }) {
     try {
       const { data } = await api.put(`/orders/${orderId}`, updates);
 
+      const updatedOrder = data.order || data;
+
       setOrders((currentOrders) =>
-        currentOrders.map((order) =>
-          order._id === data.order._id ? data.order : order
-        )
+        Array.isArray(currentOrders)
+          ? currentOrders.map((order) =>
+              (order._id || order.id) ===
+              (updatedOrder._id || updatedOrder.id)
+                ? updatedOrder
+                : order
+            )
+          : []
       );
 
       toast.success("Order updated");
@@ -96,27 +132,33 @@ export function OrderProvider({ children }) {
 
   const deleteOrder = async (orderId) => {
     setOrders((currentOrders) =>
-      currentOrders.filter((order) => order._id !== orderId)
+      Array.isArray(currentOrders)
+        ? currentOrders.filter(
+            (order) => (order._id || order.id) !== orderId
+          )
+        : []
     );
 
     toast.success("Order removed locally");
-
-    // Backend delete route can be added later.
   };
+
+  const safeOrders = Array.isArray(orders) ? orders : [];
 
   const orderStats = useMemo(() => {
     return {
-      total: orders.length,
-      pending: orders.filter((order) => order.orderStatus === "Pending").length,
-      approved: orders.filter((order) => order.orderStatus === "Approved")
+      total: safeOrders.length,
+      pending: safeOrders.filter((order) => order.orderStatus === "Pending")
         .length,
-      delivered: orders.filter((order) => order.deliveryStatus === "Delivered")
+      approved: safeOrders.filter((order) => order.orderStatus === "Approved")
         .length,
+      delivered: safeOrders.filter(
+        (order) => order.deliveryStatus === "Delivered"
+      ).length,
     };
-  }, [orders]);
+  }, [safeOrders]);
 
   const value = {
-    orders,
+    orders: safeOrders,
     loadingOrders,
     orderStats,
     fetchMyOrders,

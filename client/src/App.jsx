@@ -28,6 +28,8 @@ import AdminOrders from "./pages/admin/AdminOrders";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminDeliveryZones from "./pages/admin/AdminDeliveryZones";
+import AdminCustomOrders from "./pages/admin/AdminCustomOrders";
+import AdminCustomPricing from "./pages/admin/AdminCustomPricing";
 
 
 function App() {
@@ -94,6 +96,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/products/:id" element={<ProductDetails />} />
+        <Route path="/order-success/:trackingCode" element={<OrderSuccess />} />
         <Route path="*" element={<NotFound />} />
       </Route>
 
@@ -115,6 +118,8 @@ function App() {
         <Route path="orders" element={<AdminOrders />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="delivery" element={<AdminDeliveryZones />} />
+        <Route path="/admin/custom-orders" element={<AdminCustomOrders />} />
+<Route path="/admin/custom-pricing" element={<AdminCustomPricing />} />
       </Route>
     </Routes>
   );
